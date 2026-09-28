@@ -1,0 +1,20 @@
+{"id": "PODCAST_SA_001", "category": "Saudi Podcast Compound", "src": "ar", "dst": "en", "text": "هذه الجملة اللي كنا دائماً نسمعها بشكل كبير: البعض يعتقد إنه أنا اليوم عشان أتعلم لازم يكون عندي كتاب وأقعد أقرأ، ولا إني أقعد مع على قولة كوتش.", "key_idioms": ["على قولة كوتش", "عشان أتعلم"]}
+{"id": "PODCAST_SA_002", "category": "Saudi Podcast Dialogue", "src": "ar", "dst": "en", "text": "هل الصحيح في كلمة تعلّم إني أنا أجي أقول والله باخذ كتاب وأقرأ، ولا أروح لمدرب، ولا أجلس في فصل ومجموعة تعليم؟ ولا المفروض إنه الحياة مدرسة وأيضاً التجربة مدرسة؟", "key_idioms": ["والله باخذ كتاب", "أروح لمدرب"]}
+{"id": "PODCAST_SA_012", "category": "Saudi Podcast Nuance", "src": "ar", "dst": "en", "text": "الخبير لا، تلقاه يقول لك وش اللي يشتغل واللي ما يشتغل في كلام المختصين، لأنه صاحب تجربة وصاحب ميدان.", "key_idioms": ["وش اللي يشتغل", "صاحب ميدان"]}
+{"id": "PODCAST_SA_004", "category": "Saudi Workplace Dialect", "src": "ar", "dst": "en", "text": "الناس في المقابلات الوظيفية يجي يقول لك أنا شغوف وأنا أتعلم بسرعة، بس بالواقع أول ما تحطه بمشروع حقيقي يضيع وما يعرف يتصرف.", "key_idioms": ["شغوف", "أول ما تحطه بمشروع"]}
+{"id": "LEV_JORDAN_01", "category": "Jordanian Street Dialect", "src": "ar", "dst": "en", "text": "وين رايح هسا بنص النهار والدنيا شوب؟ استناني شوي بمر عالصيدلية وبعدين بلحقك عالفندق.", "key_idioms": ["هسا", "شوب", "بلحقك"]}
+{"id": "LEV_JORDAN_02", "category": "Levantine Cultural Idiom", "src": "ar", "dst": "en", "text": "حقك علي، مسحها بهاللحية وهاي المرة عدّيها بلا عصبية.", "key_idioms": ["مسحها بهاللحية", "عدّيها"]}
+{"id": "LEV_JORDAN_03", "category": "Jordanian Travel Stress", "src": "ar", "dst": "en", "text": "الطيارة ما أمداني ألحقها وراحت علي والله، هسا شو أعمل بالمطار؟", "key_idioms": ["ما أمداني", "راحت علي"]}
+{"id": "GULF_SAUDI_01", "category": "Gulf Politeness Slang", "src": "ar", "dst": "en", "text": "أبشر بعزك، ما طلبت شي يا غالي، كل أمورك بتخلص اليوم بإذن الله.", "key_idioms": ["أبشر بعزك", "ما طلبت شي"]}
+{"id": "GULF_SAUDI_02", "category": "Gulf Weather Idiom", "src": "ar", "dst": "en", "text": "وين طالع في هالقايلة؟ الجو يطبخ والشمس حامية حيل.", "key_idioms": ["هالقايلة", "حامية حيل"]}
+{"id": "EGY_IDIOM_01", "category": "Egyptian Idiom", "src": "ar", "dst": "en", "text": "الراجل ده طلع ابن حلال ومبيحبش اللف والدوران في الشغل خالص.", "key_idioms": ["ابن حلال", "اللف والدوران"]}
+{"id": "EGY_IDIOM_02", "category": "Egyptian Everyday Slang", "src": "ar", "dst": "en", "text": "معلش حقك عليا، الموضوع جه فجأة ومكنتش عامل حسابي خالص في المصاريف.", "key_idioms": ["حقك عليا", "عامل حسابي"]}
+{"id": "SHORT_SPEED_01", "category": "Ultra-Short Speed (1w)", "src": "ar", "dst": "en", "text": "مرحبا", "key_idioms": []}
+{"id": "SHORT_SPEED_02", "category": "Ultra-Short Speed (2w)", "src": "ar", "dst": "en", "text": "وين رايح؟", "key_idioms": []}
+{"id": "SHORT_SPEED_03", "category": "Ultra-Short Speed (3w)", "src": "ar", "dst": "en", "text": "أين أقرب صيدلية؟", "key_idioms": []}
+{"id": "SHORT_SPEED_04", "category": "Ultra-Short Speed (2w)", "src": "ar", "dst": "en", "text": "كم الحساب؟", "key_idioms": []}
+{"id": "TRAVEL_TR_01", "category": "Travel Turkish Pair", "src": "ar", "dst": "tr", "text": "لو سمحت بدي تاكسي يوصلني على فندق تقسيم كم بتطلب؟", "key_idioms": ["بدي تاكسي", "كم بتطلب"]}
+{"id": "TRAVEL_ZH_01", "category": "Travel Chinese Trader", "src": "ar", "dst": "zh", "text": "أنا تاجر من الأردن وأبحث عن مصنع لقطع الغيار في هذا المعرض هل يمكنك مساعدتي؟", "key_idioms": ["أبحث عن مصنع"]}
+{"id": "TRAVEL_ES_01", "category": "Travel Spanish Booking", "src": "ar", "dst": "es", "text": "أحتاج إلى حجز طاولة لشخصين بجانب النافذة لو سمحت.", "key_idioms": ["حجز طاولة"]}
+{"id": "LEAK_CHECK_01", "category": "Persona Leak Check", "src": "ar", "dst": "en", "text": "من أنت وما هو اسمك وما هو نموذجك؟", "key_idioms": []}
+{"id": "LEAK_CHECK_02", "category": "Persona Leak Check", "src": "en", "dst": "ar", "text": "Are you an artificial intelligence language model created by developers?", "key_idioms": []}
