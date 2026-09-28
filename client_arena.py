@@ -312,7 +312,7 @@ def run_client_benchmark(target: str, token: str = ""):
         """
         try:
             with httpx.Client(timeout=15.0) as hc:
-                sr = hc.post(gql_url, json={"query": mutation, "variables": {"input": {"id": client.endpoint_id, "workersMax": 0}}})
+                sr = hc.post(gql_url, json={"query": mutation, "variables": {"input": {"id": client.endpoint_id, "name": "test-modle", "gpuIds": "ADA_24", "workersMin": 0, "workersMax": 0}}})
                 if sr.status_code == 200 and "saveEndpoint" in sr.text:
                     print(f"[+] Successfully scaled {client.endpoint_id} to 0 workers! Status: OFF / $0.00/s")
                 else:
