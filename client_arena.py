@@ -81,38 +81,41 @@ class ArenaClient:
                 r.raise_for_status()
                 return r.json()
 
-        # RunPod Queue Mode
-        with httpx.Client(timeout=60.0) as client:
+        # RunPod Queue Mode (Async /run + Poll for maximum robustness)
+        with httpx.Client(timeout=30.0) as client:
             t0 = time.perf_counter()
-            r = client.post(self.runsync_url, json={"input": job_input}, headers=headers)
+            run_url = f"https://api.runpod.ai/v2/{self.endpoint_id}/run"
+            r = client.post(run_url, json={"input": job_input}, headers=headers)
             r.raise_for_status()
             data = r.json()
-
-            status = data.get("status")
-            if status == "COMPLETED":
-                return data.get("output", {})
 
             job_id = data.get("id")
             if not job_id:
                 raise RuntimeError(f"Unexpected response from RunPod: {data}")
 
-            # Job is in progress / queued, poll status
-            print(f"      [~] Job {job_id} status: {status}, polling...", end="", flush=True)
             status_url = f"{self.status_base_url}/{job_id}"
+            dot_printed = False
+
             while time.perf_counter() - t0 < timeout_s:
-                time.sleep(2.5)
                 sr = client.get(status_url, headers=headers)
                 if sr.status_code == 200:
                     sdata = sr.json()
                     cur_status = sdata.get("status")
                     if cur_status == "COMPLETED":
-                        print(" [Done]", flush=True)
+                        if dot_printed:
+                            print(" [Done]", flush=True)
                         return sdata.get("output", {})
                     elif cur_status in ["FAILED", "CANCELLED"]:
                         print(f" [{cur_status}]", flush=True)
                         raise RuntimeError(f"RunPod job {job_id} failed: {sdata.get('error')}")
                     else:
-                        print(".", end="", flush=True)
+                        if not dot_printed:
+                            dot_printed = True
+                            print(f" (waiting {cur_status}", end="", flush=True)
+                        else:
+                            print(".", end="", flush=True)
+
+                time.sleep(2.5)
 
             raise TimeoutError(f"Job {job_id} exceeded timeout of {timeout_s}s")
 
@@ -167,7 +170,7 @@ def run_client_benchmark(target: str, token: str = ""):
     # 1. Health & Discovery
     print("[*] Checking endpoint health and discovering loaded model...")
     try:
-        health = client.call_endpoint({"action": "health"}, timeout_s=90.0)
+        health = client.call_endpoint({"action": "health"}, timeout_s=300.0)
     except Exception as exc:
         print(f"[!] Health check failed: {exc}")
         return
@@ -287,13 +290,37 @@ def run_client_benchmark(target: str, token: str = ""):
     update_leaderboard(RESULTS_DIR, ARENA_DIR / "LEADERBOARD.md")
     print("[+] LEADERBOARD.md successfully updated!")
 
+    # 5. Automatically shut down workers to prevent ongoing costs
+    if client.is_runpod and client.endpoint_id:
+        print("\n" + "=" * 90)
+        print(f"[*] Scaling endpoint {client.endpoint_id} to 0 workers (Stopping GPU costs)...")
+        gql_url = f"https://api.runpod.io/graphql?api_key={client.token}"
+        mutation = """
+        mutation SaveEndpoint($input: EndpointInput!) {
+          saveEndpoint(input: $input) {
+            id
+            workersMax
+          }
+        }
+        """
+        try:
+            with httpx.Client(timeout=15.0) as hc:
+                sr = hc.post(gql_url, json={"query": mutation, "variables": {"input": {"id": client.endpoint_id, "workersMax": 0}}})
+                if sr.status_code == 200 and "saveEndpoint" in sr.text:
+                    print(f"[+] Successfully scaled {client.endpoint_id} to 0 workers! Status: OFF / $0.00/s")
+                else:
+                    print(f"[!] Warning: scale response: {sr.text}")
+        except Exception as exc:
+            print(f"[!] Could not scale endpoint automatically: {exc}")
+        print("=" * 90)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MT Model Arena Benchmark Client")
     parser.add_argument(
         "--url",
         type=str,
-        default="https://api.runpod.ai/v2/7huftovs9aage6/runsync",
+        default="https://api.runpod.ai/v2/uaozc9j6dhpf1z/runsync",
         help="RunPod runsync URL, Endpoint ID, or local URL",
     )
     parser.add_argument(

@@ -118,6 +118,7 @@ class ArenaInferenceEngine:
             num_tokens = len(outputs[0].outputs[0].token_ids)
         else:
             inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda")
+            inputs.pop("token_type_ids", None)
             input_len = inputs["input_ids"].shape[1]
             with torch.no_grad():
                 outputs = self.model.generate(
