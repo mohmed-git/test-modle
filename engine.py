@@ -1,6 +1,9 @@
 """Unified Model Inference Engine for MT Arena.
 
-Supports both vLLM (high throughput) and Transformers (universal fallback).
+Supports:
+  - vLLM (high throughput, where supported)
+  - Transformers AutoModelForCausalLM (traditional text LLMs: Hy-MT2, Qwen)
+  - Transformers AutoModelForMultimodalLM & AutoProcessor (Gemma 4 Any-to-Any)
 Tracks:
   - Exact VRAM before and after loading
   - Peak inference VRAM
@@ -17,7 +20,18 @@ try:
 except ImportError:
     HAS_VLLM = False
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoProcessor,
+    AutoTokenizer,
+)
+
+try:
+    from transformers import AutoModelForMultimodalLM
+    HAS_MULTIMODAL_LM = True
+except ImportError:
+    HAS_MULTIMODAL_LM = False
 
 
 def get_vram_info() -> dict[str, float]:
@@ -36,6 +50,22 @@ def get_vram_info() -> dict[str, float]:
     }
 
 
+def is_multimodal_model(model_id: str, config: Any) -> bool:
+    """Detect if model requires Multimodal / ConditionalGeneration architecture."""
+    mid = model_id.lower()
+    if "gemma-4" in mid or "gemma4" in mid:
+        return True
+    if config:
+        archs = getattr(config, "architectures", []) or []
+        model_type = getattr(config, "model_type", "").lower()
+        if "gemma4" in model_type:
+            return True
+        for a in archs:
+            if "ConditionalGeneration" in a or "Multimodal" in a:
+                return True
+    return False
+
+
 class ArenaInferenceEngine:
     def __init__(
         self,
@@ -51,7 +81,9 @@ class ArenaInferenceEngine:
         self.backend_name = "unknown"
         self.llm = None
         self.tokenizer = None
+        self.processor = None
         self.model = None
+        self.is_multimodal = False
 
         self.initial_vram = get_vram_info()
         self.loaded_vram = {}
@@ -83,14 +115,88 @@ class ArenaInferenceEngine:
 
         if self.llm is None:
             print(f"[*] Loading via Transformers: {self.model_id}...")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, trust_remote_code=True)
             dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                device_map="auto",
-                torch_dtype=dtype,
-                trust_remote_code=True,
-            )
+
+            try:
+                config = AutoConfig.from_pretrained(self.model_id, trust_remote_code=True)
+            except Exception as exc:
+                print(f"[!] Warning reading AutoConfig: {exc}")
+                config = None
+
+            self.is_multimodal = is_multimodal_model(self.model_id, config)
+
+            if self.is_multimodal:
+                print(f"[*] Detected Multimodal Architecture ({self.model_id}). Initializing AutoProcessor & AutoModelForMultimodalLM...")
+                try:
+                    self.processor = AutoProcessor.from_pretrained(self.model_id, trust_remote_code=True)
+                except Exception as pe:
+                    print(f"[!] AutoProcessor failed ({pe}), will fallback to tokenizer...")
+                    self.processor = None
+
+                try:
+                    self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, trust_remote_code=True)
+                except Exception:
+                    self.tokenizer = getattr(self.processor, "tokenizer", None)
+
+                loaded = False
+                if HAS_MULTIMODAL_LM:
+                    try:
+                        print("[*] Attempting AutoModelForMultimodalLM.from_pretrained...")
+                        self.model = AutoModelForMultimodalLM.from_pretrained(
+                            self.model_id,
+                            device_map="auto",
+                            torch_dtype=dtype,
+                            trust_remote_code=True,
+                        )
+                        loaded = True
+                    except Exception as me:
+                        print(f"[!] AutoModelForMultimodalLM failed: {me}")
+
+                if not loaded:
+                    print("[*] Attempting AutoModelForCausalLM / AutoModel fallback...")
+                    try:
+                        self.model = AutoModelForCausalLM.from_pretrained(
+                            self.model_id,
+                            device_map="auto",
+                            torch_dtype=dtype,
+                            trust_remote_code=True,
+                        )
+                    except Exception:
+                        from transformers import AutoModel
+                        self.model = AutoModel.from_pretrained(
+                            self.model_id,
+                            device_map="auto",
+                            torch_dtype=dtype,
+                            trust_remote_code=True,
+                        )
+            else:
+                print(f"[*] Loading standard CausalLM: {self.model_id}...")
+                self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, trust_remote_code=True)
+                self.processor = None
+                try:
+                    self.model = AutoModelForCausalLM.from_pretrained(
+                        self.model_id,
+                        device_map="auto",
+                        torch_dtype=dtype,
+                        trust_remote_code=True,
+                    )
+                except Exception as me:
+                    if HAS_MULTIMODAL_LM and ("keys" in str(me).lower() or "conditional" in str(me).lower()):
+                        print(f"[!] CausalLM threw multimodal error. Switching to AutoModelForMultimodalLM...")
+                        self.model = AutoModelForMultimodalLM.from_pretrained(
+                            self.model_id,
+                            device_map="auto",
+                            torch_dtype=dtype,
+                            trust_remote_code=True,
+                        )
+                        self.is_multimodal = True
+                        try:
+                            self.processor = AutoProcessor.from_pretrained(self.model_id, trust_remote_code=True)
+                        except Exception:
+                            self.processor = None
+                    else:
+                        raise me
+
             self.backend_name = "transformers"
             print(f"[+] Loaded successfully via Transformers in {time.perf_counter() - t0:.2f}s")
 
@@ -116,6 +222,68 @@ class ArenaInferenceEngine:
             gen_time = (time.perf_counter() - t0) * 1000.0
             generated_text = outputs[0].outputs[0].text.strip()
             num_tokens = len(outputs[0].outputs[0].token_ids)
+        elif self.is_multimodal and self.processor is not None:
+            inputs = None
+            if hasattr(self.processor, "apply_chat_template"):
+                try:
+                    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
+                    try:
+                        inputs = self.processor.apply_chat_template(
+                            messages,
+                            tokenize=True,
+                            return_dict=True,
+                            return_tensors="pt",
+                            add_generation_prompt=True,
+                            enable_thinking=False,
+                        )
+                    except TypeError:
+                        inputs = self.processor.apply_chat_template(
+                            messages,
+                            tokenize=True,
+                            return_dict=True,
+                            return_tensors="pt",
+                            add_generation_prompt=True,
+                        )
+                except Exception:
+                    inputs = None
+
+            if inputs is None:
+                try:
+                    inputs = self.processor(text=prompt, return_tensors="pt")
+                except Exception:
+                    inputs = self.tokenizer(prompt, return_tensors="pt")
+
+            device = getattr(self.model, "device", "cuda")
+            inputs = {k: v.to(device) if hasattr(v, "to") else v for k, v in inputs.items()}
+            inputs.pop("token_type_ids", None)
+            input_len = inputs["input_ids"].shape[-1]
+
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_tokens,
+                    do_sample=False,
+                    temperature=None,
+                    top_p=None,
+                )
+            gen_time = (time.perf_counter() - t0) * 1000.0
+            gen_tokens = outputs[0][input_len:]
+
+            if hasattr(self.processor, "decode"):
+                raw_decoded = self.processor.decode(gen_tokens, skip_special_tokens=True)
+                if hasattr(self.processor, "parse_response"):
+                    try:
+                        parsed = self.processor.parse_response(raw_decoded)
+                        generated_text = parsed.get("text", raw_decoded) if isinstance(parsed, dict) else str(parsed)
+                    except Exception:
+                        generated_text = raw_decoded
+                else:
+                    generated_text = raw_decoded
+            else:
+                generated_text = self.tokenizer.decode(gen_tokens, skip_special_tokens=True)
+
+            generated_text = generated_text.strip()
+            num_tokens = len(gen_tokens)
         else:
             inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda")
             inputs.pop("token_type_ids", None)

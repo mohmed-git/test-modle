@@ -18,6 +18,13 @@ import httpx
 
 from generate_leaderboard import update_leaderboard
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 ARENA_DIR = Path(__file__).resolve().parent
 DATASET_PATH = ARENA_DIR / "dataset" / "canonical_suite.jsonl"
 RESULTS_DIR = ARENA_DIR / "results"
@@ -115,7 +122,7 @@ class ArenaClient:
                         else:
                             print(".", end="", flush=True)
 
-                time.sleep(2.5)
+                time.sleep(0.3)
 
             raise TimeoutError(f"Job {job_id} exceeded timeout of {timeout_s}s")
 

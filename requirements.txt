@@ -1,8 +1,11 @@
 runpod>=1.7.0
 vllm>=0.6.0
-transformers>=4.45.0
+transformers>=5.5.0
 torch>=2.4.0
 accelerate>=0.34.0
+torchvision
+librosa
+soundfile
 huggingface_hub
 tabulate
 tqdm

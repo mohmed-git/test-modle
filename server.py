@@ -86,10 +86,14 @@ def format_model_prompt(text: str, source: str, target: str, candidate: ModelCan
             {"role": "user", "content": text},
         ]
 
-    # Try applying tokenizer chat template if available
-    if ENGINE and ENGINE.tokenizer and hasattr(ENGINE.tokenizer, "apply_chat_template"):
+    # Try applying processor / tokenizer chat template if available
+    target_proc = (getattr(ENGINE, "processor", None) or getattr(ENGINE, "tokenizer", None)) if ENGINE else None
+    if target_proc and hasattr(target_proc, "apply_chat_template"):
         try:
-            return ENGINE.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            try:
+                return target_proc.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+            except TypeError:
+                return target_proc.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         except Exception:
             pass
 
