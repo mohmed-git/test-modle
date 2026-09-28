@@ -59,3 +59,5 @@ python run_arena.py --model "tencent/Hy-MT2-7B" --name "hy-mt2-custom"
 python generate_leaderboard.py
 ```
 يقوم هذا الأمر بقراءة كافة نتائج النماذج التي تم اختبارها في مجلد `results/` وتوليد ملف `LEADERBOARD.md` للمقارنة الشاملة وجهاً لوجه!
+
+<!-- Build Trigger: 2026-09-28 14:46:25 -->
